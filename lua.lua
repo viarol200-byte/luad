@@ -1,13 +1,22 @@
--- Revenge Hub | Custom GUI by VRT PIDOR DEV
+-- Revenge Hub | Custom GUI (No Libraries + No Neon + Unload)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Events = ReplicatedStorage:WaitForChild("Events")
 
--- Состояния функций
+-- Флаг работы скрипта
+local ScriptRunning = true
+
+-- Настройки и переменные
+local SelectedCase = "Beggar"
+local OpenAmount = 1
+local DiceAmount = 1000000
+
 local AutoOpenEnabled = false
 local AutoSellEnabled = false
 local AutoFuseEnabled = false
@@ -38,7 +47,7 @@ if CoreGui:FindFirstChild("VRTHubCustom") then
     CoreGui.VRTHubCustom:Destroy()
 end
 
--- Создание ScreenGui
+-- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "VRTHubCustom"
 ScreenGui.Parent = CoreGui
@@ -47,242 +56,377 @@ ScreenGui.ResetOnSpawn = false
 -- Главный контейнер
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 480, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Size = UDim2.new(0, 520, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 229, 255)
-MainStroke.Thickness = 1.5
+MainStroke.Color = Color3.fromRGB(45, 45, 52)
+MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
 -- Заголовок
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -20, 0, 40)
-TitleLabel.Position = UDim2.new(0, 10, 0, 5)
+TitleLabel.Size = UDim2.new(1, -50, 0, 36)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "REVENGE HUB <font color='#00e5ff'>| VRT PIDOR DEV</font>"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
+TitleLabel.Text = "REVENGE HUB <font color='#888899'>| NFT Battles</font>"
+TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+TitleLabel.TextSize = 14
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.RichText = true
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = MainFrame
 
--- Кнопка закрытия/сворачивания
+-- Кнопка закрытия
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -32, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 38)
 CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
+CloseBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
+CloseBtn.TextSize = 12
 CloseBtn.Parent = MainFrame
 
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 6)
 CloseCorner.Parent = CloseBtn
 
--- Контейнер с кнопками-переключателями
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -110)
-ContentFrame.Position = UDim2.new(0, 10, 0, 45)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.ScrollBarThickness = 4
-ContentFrame.Parent = MainFrame
+-- Панель вкладок (Слева)
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(0, 120, 1, -46)
+TabBar.Position = UDim2.new(0, 8, 0, 38)
+TabBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = MainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.Parent = ContentFrame
+local TabBarCorner = Instance.new("UICorner")
+TabBarCorner.CornerRadius = UDim.new(0, 6)
+TabBarCorner.Parent = TabBar
 
--- Функция создания переключателя
-local function CreateToggle(text, callback)
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.Padding = UDim.new(0, 4)
+TabListLayout.Parent = TabBar
+
+-- Контейнер для страниц
+local PagesFolder = Instance.new("Frame")
+PagesFolder.Size = UDim2.new(1, -144, 1, -46)
+PagesFolder.Position = UDim2.new(0, 134, 0, 38)
+PagesFolder.BackgroundTransparency = 1
+PagesFolder.Parent = MainFrame
+
+local Tabs = {}
+local CurrentTabBtn = nil
+
+local function CreateTab(name)
+    local Page = Instance.new("ScrollingFrame")
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.ScrollBarThickness = 3
+    Page.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 70)
+    Page.Visible = false
+    Page.Parent = PagesFolder
+
+    local PageLayout = Instance.new("UIListLayout")
+    PageLayout.Padding = UDim.new(0, 6)
+    PageLayout.Parent = Page
+
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Size = UDim2.new(1, 0, 0, 32)
+    TabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Color3.fromRGB(160, 160, 170)
+    TabBtn.Font = Enum.Font.GothamMedium
+    TabBtn.TextSize = 12
+    TabBtn.Parent = TabBar
+
+    local TabBtnCorner = Instance.new("UICorner")
+    TabBtnCorner.CornerRadius = UDim.new(0, 6)
+    TabBtnCorner.Parent = TabBtn
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, tab in pairs(Tabs) do
+            tab.Page.Visible = false
+            tab.Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+            tab.Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
+        end
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(40, 48, 60)
+        TabBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    end)
+
+    Tabs[name] = {Page = Page, Btn = TabBtn}
+    return Page
+end
+
+local MainPage = CreateTab("Main")
+local PVPPage = CreateTab("PVP")
+local SummerPage = CreateTab("Summer")
+local StatsPage = CreateTab("Stats")
+local SettingsPage = CreateTab("Settings")
+
+-- Активируем первую вкладку
+Tabs["Main"].Page.Visible = true
+Tabs["Main"].Btn.BackgroundColor3 = Color3.fromRGB(40, 48, 60)
+Tabs["Main"].Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+
+-- Хелперы UI
+local function AddToggle(parent, text, callback)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, -10, 0, 38)
-    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    Btn.Size = UDim2.new(1, -6, 0, 34)
+    Btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
     Btn.Text = "  " .. text .. ": OFF"
-    Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
     Btn.Font = Enum.Font.GothamMedium
-    Btn.TextSize = 13
+    Btn.TextSize = 12
     Btn.TextXAlignment = Enum.TextXAlignment.Left
-    Btn.Parent = ContentFrame
+    Btn.Parent = parent
 
     local Corner = Instance.new("UICorner")
     Corner.CornerRadius = UDim.new(0, 6)
     Corner.Parent = Btn
 
     local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(40, 40, 50)
+    Stroke.Color = Color3.fromRGB(40, 40, 48)
     Stroke.Thickness = 1
     Stroke.Parent = Btn
 
     local state = false
     Btn.MouseButton1Click:Connect(function()
+        if not ScriptRunning then return end
         state = not state
         if state then
             Btn.Text = "  " .. text .. ": ON"
-            Btn.TextColor3 = Color3.fromRGB(0, 229, 255)
-            Btn.BackgroundColor3 = Color3.fromRGB(20, 40, 50)
-            Stroke.Color = Color3.fromRGB(0, 229, 255)
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.BackgroundColor3 = Color3.fromRGB(40, 50, 65)
+            Stroke.Color = Color3.fromRGB(65, 80, 100)
             if StartBalance == nil then StartBalance = GetCurrentBalance() end
         else
             Btn.Text = "  " .. text .. ": OFF"
-            Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-            Stroke.Color = Color3.fromRGB(40, 40, 50)
+            Btn.TextColor3 = Color3.fromRGB(160, 160, 170)
+            Btn.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+            Stroke.Color = Color3.fromRGB(40, 40, 48)
         end
         callback(state)
     end)
 end
 
-CreateToggle("Auto Open Cases", function(s) AutoOpenEnabled = s end)
-CreateToggle("Auto Sell Inventory", function(s) AutoSellEnabled = s end)
-CreateToggle("Auto Fuse (Plush Pepe)", function(s) AutoFuseEnabled = s end)
-CreateToggle("Auto Summer Claim", function(s) AutoSummerEnabled = s end)
-CreateToggle("Auto Dice PVP Bot", function(s) AutoDiceBotEnabled = s end)
+local function AddButton(parent, text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -6, 0, 32)
+    Btn.BackgroundColor3 = Color3.fromRGB(32, 32, 38)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(200, 200, 210)
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.TextSize = 12
+    Btn.Parent = parent
 
--- Статистика внизу
-local StatsFrame = Instance.new("Frame")
-StatsFrame.Size = UDim2.new(1, -20, 0, 50)
-StatsFrame.Position = UDim2.new(0, 10, 1, -55)
-StatsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-StatsFrame.Parent = MainFrame
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Btn
 
-local StatsCorner = Instance.new("UICorner")
-StatsCorner.CornerRadius = UDim.new(0, 6)
-StatsCorner.Parent = StatsFrame
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(45, 45, 52)
+    Stroke.Thickness = 1
+    Stroke.Parent = Btn
 
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, -10, 1, 0)
-StatsLabel.Position = UDim2.new(0, 5, 0, 0)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "Баланс: 0 $ | Окуп: 0 $\nВремя: 00:00:00 (Пауза)"
-StatsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatsLabel.TextSize = 11
-StatsLabel.Font = Enum.Font.Gotham
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatsLabel.Parent = StatsFrame
+    Btn.MouseButton1Click:Connect(function()
+        if ScriptRunning then callback() end
+    end)
+end
+
+local function AddInput(parent, text, defaultVal, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -6, 0, 34)
+    Frame.BackgroundColor3 = Color3.fromRGB(28, 28, 34)
+    Frame.Parent = parent
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Frame
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(40, 40, 48)
+    Stroke.Thickness = 1
+    Stroke.Parent = Frame
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
+    Label.Position = UDim2.new(0, 8, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(160, 160, 170)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 11
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+
+    local Box = Instance.new("TextBox")
+    Box.Size = UDim2.new(0.35, -8, 0, 22)
+    Box.Position = UDim2.new(0.65, 0, 0.5, -11)
+    Box.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    Box.Text = tostring(defaultVal)
+    Box.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Box.Font = Enum.Font.Gotham
+    Box.TextSize = 11
+    Box.Parent = Frame
+
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 4)
+    BoxCorner.Parent = Box
+
+    Box.FocusLost:Connect(function()
+        callback(Box.Text)
+    end)
+end
+
+local function AddParagraph(parent, title)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -6, 0, 42)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Frame.Parent = parent
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Frame
+
+    local TTitle = Instance.new("TextLabel")
+    TTitle.Size = UDim2.new(1, -12, 0, 18)
+    TTitle.Position = UDim2.new(0, 6, 0, 4)
+    TTitle.BackgroundTransparency = 1
+    TTitle.Text = title
+    TTitle.TextColor3 = Color3.fromRGB(200, 200, 210)
+    TTitle.Font = Enum.Font.GothamBold
+    TTitle.TextSize = 11
+    TTitle.TextXAlignment = Enum.TextXAlignment.Left
+    TTitle.Parent = Frame
+
+    local TDesc = Instance.new("TextLabel")
+    TDesc.Size = UDim2.new(1, -12, 0, 16)
+    TDesc.Position = UDim2.new(0, 6, 0, 20)
+    TDesc.BackgroundTransparency = 1
+    TDesc.Text = "---"
+    TDesc.TextColor3 = Color3.fromRGB(150, 150, 160)
+    TDesc.Font = Enum.Font.Gotham
+    TDesc.TextSize = 11
+    TDesc.TextXAlignment = Enum.TextXAlignment.Left
+    TDesc.Parent = Frame
+
+    return TDesc
+end
+
+-- MAIN TAB
+AddInput(MainPage, "Open Amount (1-10)", "1", function(val)
+    local num = tonumber(val)
+    if num then OpenAmount = math.clamp(num, 1, 10) end
+end)
+AddToggle(MainPage, "Auto Open Cases", function(s) AutoOpenEnabled = s end)
+AddToggle(MainPage, "Auto Sell Inventory", function(s) AutoSellEnabled = s end)
+AddToggle(MainPage, "Auto Fuse (Plush Pepe)", function(s) AutoFuseEnabled = s end)
+
+-- PVP TAB
+AddInput(PVPPage, "Bet Amount", "1000000", function(val)
+    local num = tonumber(val)
+    if num then DiceAmount = num end
+end)
+AddToggle(PVPPage, "Auto Dice PVP Bot", function(s) AutoDiceBotEnabled = s end)
+
+-- SUMMER TAB
+AddToggle(SummerPage, "Auto Summer Claim", function(s) AutoSummerEnabled = s end)
+
+-- STATS TAB
+local BalText = AddParagraph(StatsPage, "Current Balance")
+local ProfitText = AddParagraph(StatsPage, "Total Profit / Loss")
+local CasesText = AddParagraph(StatsPage, "Total Cases Opened")
+local TimeText = AddParagraph(StatsPage, "Active Time Elapsed")
+
+AddButton(StatsPage, "Reset Profit Tracker", function()
+    StartBalance = GetCurrentBalance()
+end)
+
+-- SETTINGS TAB
+AddButton(SettingsPage, "FPS Booster", function()
+    pcall(function()
+        local Terrain = workspace:FindFirstChildOfClass('Terrain')
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 0
+        end
+        game:GetService("Lighting").GlobalShadows = false
+        game:GetService("Lighting").FogEnd = 9e9
+        
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("Part") or v:IsA("UnionOperation") or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v:Destroy()
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+    end)
+end)
+
+AddButton(SettingsPage, "Rejoin Server", function()
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+AddButton(SettingsPage, "Server Hop", function()
+    pcall(function()
+        local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")).data
+        for _, server in pairs(Servers) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
+                break
+            end
+        end
+    end)
+end)
+
+-- UNLOAD BUTTON
+local UnloadBtn = Instance.new("TextButton")
+UnloadBtn.Size = UDim2.new(1, -6, 0, 32)
+UnloadBtn.BackgroundColor3 = Color3.fromRGB(50, 25, 25)
+UnloadBtn.Text = "UNLOAD SCRIPT"
+UnloadBtn.TextColor3 = Color3.fromRGB(220, 100, 100)
+UnloadBtn.Font = Enum.Font.GothamBold
+UnloadBtn.TextSize = 11
+UnloadBtn.Parent = SettingsPage
+
+local UnloadCorner = Instance.new("UICorner")
+UnloadCorner.CornerRadius = UDim.new(0, 6)
+UnloadCorner.Parent = UnloadBtn
+
+local UnloadStroke = Instance.new("UIStroke")
+UnloadStroke.Color = Color3.fromRGB(80, 35, 35)
+UnloadStroke.Thickness = 1
+UnloadStroke.Parent = UnloadBtn
 
 -- Мобильная плавающая кнопка
 local MobileBtn = Instance.new("TextButton")
 MobileBtn.Name = "MobileToggle"
-MobileBtn.Size = UDim2.new(0, 45, 0, 45)
+MobileBtn.Size = UDim2.new(0, 42, 0, 42)
 MobileBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-MobileBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MobileBtn.Text = "VRT"
-MobileBtn.TextColor3 = Color3.fromRGB(0, 229, 255)
+MobileBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+MobileBtn.Text = "MENU"
+MobileBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
 MobileBtn.Font = Enum.Font.GothamBold
-MobileBtn.TextSize = 12
+MobileBtn.TextSize = 10
 MobileBtn.Active = true
 MobileBtn.Draggable = true
 MobileBtn.Parent = ScreenGui
 
 local MobileCorner = Instance.new("UICorner")
-MobileCorner.CornerRadius = UDim.new(0, 10)
-MobileCorner.Parent = MobileBtn
-
-local MobileStroke = Instance.new("UIStroke")
-MobileStroke.Color = Color3.fromRGB(0, 229, 255)
-MobileStroke.Thickness = 1
-MobileStroke.Parent = MobileBtn
-
-local function ToggleMenu()
-    MainFrame.Visible = not MainFrame.Visible
-end
-
-CloseBtn.MouseButton1Click:Connect(ToggleMenu)
-MobileBtn.MouseButton1Click:Connect(ToggleMenu)
-
--- Логика фарма и подсчёта
-task.spawn(function()
-    while task.wait(1) do
-        local curBal = GetCurrentBalance()
-        local profitText = "0 $"
-        
-        if StartBalance ~= nil then
-            local profit = curBal - StartBalance
-            profitText = (profit >= 0 and "+" or "") .. tostring(profit) .. " $"
-        end
-        
-        if IsAnyFarmActive() then
-            ElapsedSeconds = ElapsedSeconds + 1
-            local h, m, s = math.floor(ElapsedSeconds / 3600), math.floor((ElapsedSeconds % 3600) / 60), ElapsedSeconds % 60
-            StatsLabel.Text = string.format("Баланс: %d $ | Окуп: %s\nВремя фарма: %02d:%02d:%02d", curBal, profitText, h, m, s)
-        else
-            local h, m, s = math.floor(ElapsedSeconds / 3600), math.floor((ElapsedSeconds % 3600) / 60), ElapsedSeconds % 60
-            StatsLabel.Text = string.format("Баланс: %d $ | Окуп: %s\nВремя фарма: %02d:%02d:%02d (Пауза)", curBal, profitText, h, m, s)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if AutoOpenEnabled then
-            pcall(function() Events.OpenCase:InvokeServer("Beggar", 1, {}) end)
-            task.wait(1.5)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if AutoSellEnabled then
-            pcall(function() Events.Inventory:FireServer("Sell", "ALL", false) end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if AutoFuseEnabled then
-            pcall(function()
-                local inv = LocalPlayer:FindFirstChild("_Inventory")
-                if inv then
-                    local items = {}
-                    for _, child in pairs(inv:GetChildren()) do
-                        if child.Name == "Plush Pepe (Amalgam)" then
-                            table.insert(items, child)
-                            if #items == 5 then break end
-                        end
-                    end
-                    if #items == 5 then Events.Fuse:InvokeServer("Fuse", items, false) end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        if AutoSummerEnabled then
-            pcall(function() Events.Summer:InvokeServer("Claim") end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(1) do
-        if AutoDiceBotEnabled then
-            pcall(function()
-                Events.DicePvp:InvokeServer("Create", 1000000, false)
-                task.wait(0.5)
-                Events.DicePvp:InvokeServer("Bot")
-            end)
-            task.wait(3)
-        end
-    end
-end)
-
-LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
+MobileCorner.CornerRadius
