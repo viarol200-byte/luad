@@ -1,22 +1,37 @@
--- Кастомный интерфейс от VRT PIDOR DEV
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
-local VirtualUser = game:GetService("VirtualUser")
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
-local LocalPlayer = Players.LocalPlayer
-local Events = ReplicatedStorage:WaitForChild("Events")
+local Window = Fluent:CreateWindow({
+    Title = "Revenge Hub | NFT Battles",
+    SubTitle = "by VRT PIDOR DEV",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark"
+})
 
--- Состояния функций
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    PVP = Window:AddTab({ Title = "PVP", Icon = "swords" }),
+    Summer = Window:AddTab({ Title = "Summer Event", Icon = "sun" }),
+    Stats = Window:AddTab({ Title = "Stats & Profit", Icon = "line-chart" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local SelectedCase = "Beggar"
+local OpenAmount = 1
+
 local AutoOpenEnabled = false
 local AutoSellEnabled = false
 local AutoFuseEnabled = false
 local AutoSummerEnabled = false
 local AutoDiceBotEnabled = false
+local DiceAmount = 1000000
 
 local TotalCasesOpened = 0
 local ElapsedSeconds = 0
 local StartBalance = nil
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
 
 local function GetCurrentBalance()
     local leaderstats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("Data")
@@ -33,193 +48,267 @@ local function IsAnyFarmActive()
     return AutoOpenEnabled or AutoSellEnabled or AutoFuseEnabled or AutoSummerEnabled or AutoDiceBotEnabled
 end
 
--- Удаление старого UI при повторном запуске
-if CoreGui:FindFirstChild("VRTHubCustom") then
-    CoreGui.VRTHubCustom:Destroy()
-end
-
--- Создание ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VRTHubCustom"
-ScreenGui.Parent = CoreGui
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+ScreenGui.Name = "MobileToggleGui"
+ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- Главный контейнер
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 480, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "MENU"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+ToggleButton.Active = true
+ToggleButton.Draggable = true
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = ToggleButton
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 229, 255)
-MainStroke.Thickness = 1.5
-MainStroke.Parent = MainFrame
+ToggleButton.MouseButton1Click:Connect(function()
+    if Window.Root then
+        Window.Root.Visible = not Window.Root.Visible
+    end
+end)
 
--- Заголовок
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -20, 0, 40)
-TitleLabel.Position = UDim2.new(0, 10, 0, 5)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "REVENGE HUB <font color='#00e5ff'>| VRT PIDOR DEV</font>"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.RichText = true
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = MainFrame
+Tabs.Main:AddSection("Cases")
 
--- Кнопка закрытия/сворачивания
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 85, 85)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
-CloseBtn.Parent = MainFrame
+Tabs.Main:AddDropdown("CaseSelect", {
+    Title = "Case to open (Select One)",
+    Values = {
+        "Beggar", "Plodder", "Office Clerk", "Manager", 
+        "Director", "Oligarch", "Frozen Heart", "Bubble Gum", 
+        "Cats", "Glitch", "Dream", "Bloody Night"
+    },
+    Default = 1,
+    Callback = function(Value)
+        SelectedCase = Value
+    end
+})
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseBtn
-
--- Контейнер с кнопками-переключателями
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -110)
-ContentFrame.Position = UDim2.new(0, 10, 0, 45)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.ScrollBarThickness = 4
-ContentFrame.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.Parent = ContentFrame
-
--- Функция создания переключателя
-local function CreateToggle(text, callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, -10, 0, 38)
-    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    Btn.Text = "  " .. text .. ": OFF"
-    Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Btn.Font = Enum.Font.GothamMedium
-    Btn.TextSize = 13
-    Btn.TextXAlignment = Enum.TextXAlignment.Left
-    Btn.Parent = ContentFrame
-
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = Btn
-
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(40, 40, 50)
-    Stroke.Thickness = 1
-    Stroke.Parent = Btn
-
-    local state = false
-    Btn.MouseButton1Click:Connect(function()
-        state = not state
-        if state then
-            Btn.Text = "  " .. text .. ": ON"
-            Btn.TextColor3 = Color3.fromRGB(0, 229, 255)
-            Btn.BackgroundColor3 = Color3.fromRGB(20, 40, 50)
-            Stroke.Color = Color3.fromRGB(0, 229, 255)
-            if StartBalance == nil then StartBalance = GetCurrentBalance() end
-        else
-            Btn.Text = "  " .. text .. ": OFF"
-            Btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-            Stroke.Color = Color3.fromRGB(40, 40, 50)
+Tabs.Main:AddInput("AmountInput", {
+    Title = "Amount to open (1-10)",
+    Default = "1",
+    Numeric = true,
+    Finished = true,
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num then
+            OpenAmount = math.clamp(num, 1, 10)
         end
-        callback(state)
-    end)
-end
+    end
+})
 
-CreateToggle("Auto Open Cases", function(s) AutoOpenEnabled = s end)
-CreateToggle("Auto Sell Inventory", function(s) AutoSellEnabled = s end)
-CreateToggle("Auto Fuse (Plush Pepe)", function(s) AutoFuseEnabled = s end)
-CreateToggle("Auto Summer Claim", function(s) AutoSummerEnabled = s end)
-CreateToggle("Auto Dice PVP Bot", function(s) AutoDiceBotEnabled = s end)
+Tabs.Main:AddToggle("AutoOpen", {
+    Title = "Auto Open", 
+    Default = false,
+    Callback = function(Value)
+        AutoOpenEnabled = Value
+        if Value and StartBalance == nil then
+            StartBalance = GetCurrentBalance()
+        end
+    end
+})
 
--- Статистика внизу
-local StatsFrame = Instance.new("Frame")
-StatsFrame.Size = UDim2.new(1, -20, 0, 50)
-StatsFrame.Position = UDim2.new(0, 10, 1, -55)
-StatsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
-StatsFrame.Parent = MainFrame
+Tabs.Main:AddSection("Inventory & Fuse")
 
-local StatsCorner = Instance.new("UICorner")
-StatsCorner.CornerRadius = UDim.new(0, 6)
-StatsCorner.Parent = StatsFrame
+Tabs.Main:AddToggle("AutoSell", {
+    Title = "Auto Sell ALL Items", 
+    Default = false,
+    Callback = function(Value)
+        AutoSellEnabled = Value
+        if Value and StartBalance == nil then
+            StartBalance = GetCurrentBalance()
+        end
+    end
+})
 
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, -10, 1, 0)
-StatsLabel.Position = UDim2.new(0, 5, 0, 0)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "Баланс: 0 $ | Окуп: 0 $\nВремя: 00:00:00 (Пауза)"
-StatsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatsLabel.TextSize = 11
-StatsLabel.Font = Enum.Font.Gotham
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatsLabel.Parent = StatsFrame
+Tabs.Main:AddToggle("AutoFuse", {
+    Title = "Auto Fuse (Plush Pepe)", 
+    Default = false,
+    Callback = function(Value)
+        AutoFuseEnabled = Value
+        if Value and StartBalance == nil then
+            StartBalance = GetCurrentBalance()
+        end
+    end
+})
 
--- Мобильная плавающая кнопка
-local MobileBtn = Instance.new("TextButton")
-MobileBtn.Name = "MobileToggle"
-MobileBtn.Size = UDim2.new(0, 45, 0, 45)
-MobileBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-MobileBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MobileBtn.Text = "VRT"
-MobileBtn.TextColor3 = Color3.fromRGB(0, 229, 255)
-MobileBtn.Font = Enum.Font.GothamBold
-MobileBtn.TextSize = 12
-MobileBtn.Active = true
-MobileBtn.Draggable = true
-MobileBtn.Parent = ScreenGui
+Tabs.PVP:AddSection("Dice PVP")
 
-local MobileCorner = Instance.new("UICorner")
-MobileCorner.CornerRadius = UDim.new(0, 10)
-MobileCorner.Parent = MobileBtn
+Tabs.PVP:AddInput("DiceBetInput", {
+    Title = "Bet Amount",
+    Default = "1000000",
+    Numeric = true,
+    Finished = true,
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num then
+            DiceAmount = num
+        end
+    end
+})
 
-local MobileStroke = Instance.new("UIStroke")
-MobileStroke.Color = Color3.fromRGB(0, 229, 255)
-MobileStroke.Thickness = 1
-MobileStroke.Parent = MobileBtn
+Tabs.PVP:AddToggle("AutoDiceBot", {
+    Title = "Auto Create & Play with Bot", 
+    Default = false,
+    Callback = function(Value)
+        AutoDiceBotEnabled = Value
+        if Value and StartBalance == nil then
+            StartBalance = GetCurrentBalance()
+        end
+    end
+})
 
-local function ToggleMenu()
-    MainFrame.Visible = not MainFrame.Visible
-end
+Tabs.Summer:AddSection("Summer Event")
 
-CloseBtn.MouseButton1Click:Connect(ToggleMenu)
-MobileBtn.MouseButton1Click:Connect(ToggleMenu)
+Tabs.Summer:AddToggle("AutoSummer", {
+    Title = "Auto Claim Event Rewards", 
+    Default = false,
+    Callback = function(Value)
+        AutoSummerEnabled = Value
+        if Value and StartBalance == nil then
+            StartBalance = GetCurrentBalance()
+        end
+    end
+})
 
--- Логика фарма и подсчёта
+Tabs.Stats:AddSection("Balance & Profit Tracker")
+
+local CurrentBalanceParagraph = Tabs.Stats:AddParagraph({
+    Title = "Current Balance",
+    Content = "0 $"
+})
+
+local ProfitParagraph = Tabs.Stats:AddParagraph({
+    Title = "Total Profit / Loss",
+    Content = "0 $"
+})
+
+Tabs.Stats:AddSection("Farm Statistics")
+
+local CasesStatParagraph = Tabs.Stats:AddParagraph({
+    Title = "Total Cases Opened",
+    Content = "0"
+})
+
+local TimeStatParagraph = Tabs.Stats:AddParagraph({
+    Title = "Active Time Elapsed",
+    Content = "00:00:00 (Paused)"
+})
+
+Tabs.Stats:AddSection("Performance & Utilities")
+
+Tabs.Stats:AddButton({
+    Title = "Reset Profit Tracker",
+    Description = "Сбросить отсчёт окупа на текущий баланс.",
+    Callback = function()
+        StartBalance = GetCurrentBalance()
+        Fluent:Notify({
+            Title = "Profit Tracker",
+            Content = "Точка отсчёта окупа сброшена!",
+            Duration = 2
+        })
+    end
+})
+
+Tabs.Stats:AddButton({
+    Title = "FPS Booster (Low Graphics)",
+    Description = "Убирает эффекты, текстуры и тени для снижения лагов.",
+    Callback = function()
+        pcall(function()
+            local Terrain = workspace:FindFirstChildOfClass('Terrain')
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 0
+            
+            game:GetService("Lighting").GlobalShadows = false
+            game:GetService("Lighting").FogEnd = 9e9
+            
+            for _, v in pairs(game:GetDescendants()) do
+                if v:IsA("Part") or v:IsA("UnionOperation") or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    v:Destroy()
+                elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                    v.Enabled = false
+                end
+            end
+        end)
+        
+        Fluent:Notify({
+            Title = "FPS Booster",
+            Content = "Графика снижена, нагрузка уменьшена!",
+            Duration = 3
+        })
+    end
+})
+
+Tabs.Stats:AddButton({
+    Title = "Rejoin Server",
+    Description = "Перезайти на этот же сервер.",
+    Callback = function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+})
+
+Tabs.Stats:AddButton({
+    Title = "Server Hop",
+    Description = "Перейти на случайный другой сервер.",
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local HttpService = game:GetService("HttpService")
+        
+        pcall(function()
+            local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")).data
+            for _, server in pairs(Servers) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
+                    break
+                end
+            end
+        end)
+    end
+})
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Events = ReplicatedStorage:WaitForChild("Events")
+
 task.spawn(function()
     while task.wait(1) do
         local curBal = GetCurrentBalance()
-        local profitText = "0 $"
+        CurrentBalanceParagraph:SetDesc(tostring(curBal) .. " $")
         
         if StartBalance ~= nil then
             local profit = curBal - StartBalance
-            profitText = (profit >= 0 and "+" or "") .. tostring(profit) .. " $"
+            if profit >= 0 then
+                ProfitParagraph:SetDesc("+" .. tostring(profit) .. " $")
+            else
+                ProfitParagraph:SetDesc(tostring(profit) .. " $")
+            end
+        else
+            ProfitParagraph:SetDesc("Включите фарм для старта отсчёта")
         end
         
         if IsAnyFarmActive() then
             ElapsedSeconds = ElapsedSeconds + 1
-            local h, m, s = math.floor(ElapsedSeconds / 3600), math.floor((ElapsedSeconds % 3600) / 60), ElapsedSeconds % 60
-            StatsLabel.Text = string.format("Баланс: %d $ | Окуп: %s\nВремя фарма: %02d:%02d:%02d", curBal, profitText, h, m, s)
+            local hours = math.floor(ElapsedSeconds / 3600)
+            local minutes = math.floor((ElapsedSeconds % 3600) / 60)
+            local seconds = ElapsedSeconds % 60
+            TimeStatParagraph:SetDesc(string.format("%02d:%02d:%02d", hours, minutes, seconds))
         else
-            local h, m, s = math.floor(ElapsedSeconds / 3600), math.floor((ElapsedSeconds % 3600) / 60), ElapsedSeconds % 60
-            StatsLabel.Text = string.format("Баланс: %d $ | Окуп: %s\nВремя фарма: %02d:%02d:%02d (Пауза)", curBal, profitText, h, m, s)
+            local hours = math.floor(ElapsedSeconds / 3600)
+            local minutes = math.floor((ElapsedSeconds % 3600) / 60)
+            local seconds = ElapsedSeconds % 60
+            TimeStatParagraph:SetDesc(string.format("%02d:%02d:%02d (Пауза)", hours, minutes, seconds))
         end
     end
 end)
@@ -227,7 +316,15 @@ end)
 task.spawn(function()
     while task.wait(0.5) do
         if AutoOpenEnabled then
-            pcall(function() Events.OpenCase:InvokeServer("Beggar", 1, {}) end)
+            local success = pcall(function()
+                Events.OpenCase:InvokeServer(SelectedCase, OpenAmount, {})
+            end)
+            
+            if success then
+                TotalCasesOpened = TotalCasesOpened + OpenAmount
+                CasesStatParagraph:SetDesc(tostring(TotalCasesOpened))
+            end
+            
             task.wait(1.5)
         end
     end
@@ -236,7 +333,9 @@ end)
 task.spawn(function()
     while task.wait(2) do
         if AutoSellEnabled then
-            pcall(function() Events.Inventory:FireServer("Sell", "ALL", false) end)
+            pcall(function()
+                Events.Inventory:FireServer("Sell", "ALL", false)
+            end)
         end
     end
 end)
@@ -254,7 +353,15 @@ task.spawn(function()
                             if #items == 5 then break end
                         end
                     end
-                    if #items == 5 then Events.Fuse:InvokeServer("Fuse", items, false) end
+                    
+                    if #items == 5 then
+                        local args = {
+                            "Fuse",
+                            items,
+                            false
+                        }
+                        Events.Fuse:InvokeServer(unpack(args))
+                    end
                 end
             end)
         end
@@ -264,7 +371,9 @@ end)
 task.spawn(function()
     while task.wait(5) do
         if AutoSummerEnabled then
-            pcall(function() Events.Summer:InvokeServer("Claim") end)
+            pcall(function()
+                Events.Summer:InvokeServer("Claim")
+            end)
         end
     end
 end)
@@ -273,7 +382,7 @@ task.spawn(function()
     while task.wait(1) do
         if AutoDiceBotEnabled then
             pcall(function()
-                Events.DicePvp:InvokeServer("Create", 1000000, false)
+                Events.DicePvp:InvokeServer("Create", DiceAmount, false)
                 task.wait(0.5)
                 Events.DicePvp:InvokeServer("Bot")
             end)
@@ -282,7 +391,15 @@ task.spawn(function()
     end
 end)
 
+local VirtualUser = game:GetService("VirtualUser")
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
+    Fluent:Notify({
+        Title = "VRT PIDOR DEV - Anti-AFK",
+        Content = "Защита от АФК сработала!",
+        Duration = 2
+    })
 end)
+
+Window:SelectTab(1)
