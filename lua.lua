@@ -1,4 +1,4 @@
--- Revenge Hub | Custom GUI by VRT PIDOR DEV
+-- Кастомный интерфейс от VRT PIDOR DEV
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
